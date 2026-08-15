@@ -3,30 +3,35 @@ name: 'Azure Terraform CI/CD'
 on:
   push:
     branches:
-      - 'feature/test-pipeline'
+      - 'fix/azure-region'
       - 'main'
+
   pull_request:
     branches:
       - 'main'
 
-# Azure OIDC Authentication ke liye permissions ਜ਼ਰੂਰੀ hain
+# Azure OIDC Authentication ke liye permissions
 permissions:
   id-token: write
   contents: read
   pull-requests: write
 
 jobs:
+
   # ==========================================
-  # STAGE 1: Feature Branch & PR CI (Init, Validate, Plan)
+  # STAGE 1: Feature Branch & PR CI
+  # Init, Validate & Plan
   # ==========================================
   terraform-plan:
     name: 'Terraform Init, Validate & Plan'
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: environment/dev
 
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -42,6 +47,11 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
 
       - name: Terraform Format & Validate
         run: |
@@ -49,7 +59,6 @@ jobs:
           terraform validate
 
       - name: Terraform Plan
-        id: plan
         run: terraform plan -no-color -out=tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -57,28 +66,37 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
-      # Plan output ko artifact ke taur par save karte hain taaki Apply stage ise use kar sake
+      # Plan artifact sirf main push ke liye
       - name: Save Terraform Plan Artifact
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: environment/dev/tfplan
 
   # ==========================================
-  # STAGE 2: Manual Approval & Terraform Apply (Only for Main Branch)
+  # STAGE 2: Manual Approval & Terraform Apply
+  # Only Main Branch
   # ==========================================
   terraform-apply:
     name: 'Terraform Approval & Apply'
+
     needs: terraform-plan
+
+    # Apply sirf main branch ke push par
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
     runs-on: ubuntu-latest
-    environment: dev-approval # Ye GitHub Environment manual approval trigger karega
+
+    # GitHub Environment Protection Rule
+    environment: dev-approval
+
     defaults:
       run:
         working-directory: environment/dev
 
     steps:
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -100,6 +118,11 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan

@@ -7,7 +7,7 @@ rgs = {
 }
 stgs = {
   stg1 = {
-    name                     = "devcode"
+    name                     = "pankajstorage"
     resource_group_name      = "dev_rg"
     location                 = "eastus"
     account_tier             = "Standard"

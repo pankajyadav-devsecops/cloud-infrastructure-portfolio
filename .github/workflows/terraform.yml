@@ -5,6 +5,7 @@ on:
     branches:
       - 'fix/azure-region'
       - 'main'
+      - 'feature/**'
 
   pull_request:
     branches:
@@ -25,6 +26,7 @@ jobs:
   terraform-plan:
     name: 'Terraform Init, Validate & Plan'
     runs-on: ubuntu-latest
+    environment: dev
 
     defaults:
       run:

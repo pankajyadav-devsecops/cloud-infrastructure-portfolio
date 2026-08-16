@@ -4,6 +4,10 @@ rgs = {
     name     = "dev_rg"
     location = "eastus"
   }
+  rg1 = {
+    name     = "dev_rg2"
+    location = "eastus"
+  }
 }
 stgs = {
   stg1 = {

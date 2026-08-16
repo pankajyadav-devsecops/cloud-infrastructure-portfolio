@@ -5,7 +5,7 @@ rgs = {
     location = "eastus"
   }
   rg1 = {
-    name     = "dev_rg2"
+    name     = "dev_rg3"
     location = "eastus"
   }
 }

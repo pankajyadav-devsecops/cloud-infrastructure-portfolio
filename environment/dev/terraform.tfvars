@@ -4,8 +4,8 @@ rgs = {
     name     = "dev_rg"
     location = "eastus"
   }
-  rg1 = {
-    name     = "dev_rg3"
+  rg2 = {
+    name     = "dev_rg2"
     location = "eastus"
   }
 }

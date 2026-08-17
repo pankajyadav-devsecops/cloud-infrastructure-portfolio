@@ -3,8 +3,8 @@ module "rgs" {
   rgs    = var.rgs
 }
 
-module "stgs" {
-  source     = "../../module/storage-account"
-  stgs       = var.stgs
-  depends_on = [module.rgs]
-}
+# module "stgs" {
+#   source     = "../../module/storage-account"
+#   stgs       = var.stgs
+#   depends_on = [module.rgs]
+# }

@@ -25,7 +25,7 @@ jobs:
   # ==========================================
   terraform-plan:
     name: 'Terraform Init, Validate & Plan'
-    runs-on: ubuntu-latest
+     runs-on: self-hosted
     environment: dev
 
     defaults:
@@ -88,7 +88,7 @@ jobs:
     # Apply sirf main branch ke push par
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    runs-on: ubuntu-latest
+     runs-on: self-hosted
 
     # GitHub Environment Protection Rule
     environment: dev-approval

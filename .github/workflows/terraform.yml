@@ -1,23 +1,18 @@
-```yaml
 name: 'Azure Terraform CI/CD'
 
 on:
-  # Manual trigger
   workflow_dispatch:
 
-  # Automatic trigger
   push:
     branches:
       - 'fix/azure-region'
       - 'main'
       - 'feature/**'
 
-  # PR trigger
   pull_request:
     branches:
       - 'main'
 
-# Azure OIDC Authentication permissions
 permissions:
   id-token: write
   contents: read
@@ -25,9 +20,6 @@ permissions:
 
 jobs:
 
-  # ==========================================
-  # STAGE 1: Terraform Init, Validate & Plan
-  # ==========================================
   terraform-plan:
     name: 'Terraform Init, Validate & Plan'
     runs-on: self-hosted
@@ -39,11 +31,9 @@ jobs:
 
     steps:
 
-      # Checkout repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Azure Login using OIDC
       - name: Azure Login via OIDC
         uses: azure/login@v2
         with:
@@ -51,11 +41,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Terraform Init
       - name: Terraform Init
         run: terraform init
         env:
@@ -64,13 +52,11 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
-      # Terraform Format & Validate
       - name: Terraform Format & Validate
         run: |
           terraform fmt -check
           terraform validate
 
-      # Terraform Plan
       - name: Terraform Plan
         run: terraform plan -no-color -out=tfplan
         env:
@@ -79,7 +65,6 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
-      # Save plan only on main push
       - name: Save Terraform Plan Artifact
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
@@ -87,22 +72,13 @@ jobs:
           name: tfplan
           path: environment/dev/tfplan
 
-
-  # ==========================================
-  # STAGE 2: Approval & Terraform Apply
-  # Only Main Branch
-  # ==========================================
   terraform-apply:
     name: 'Terraform Approval & Apply'
-
     needs: terraform-plan
 
-    # Apply only after main branch push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     runs-on: self-hosted
-
-    # GitHub Environment Protection Rule
     environment: dev-approval
 
     defaults:
@@ -111,18 +87,15 @@ jobs:
 
     steps:
 
-      # Checkout repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Download Terraform Plan
       - name: Download Terraform Plan Artifact
         uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: environment/dev
 
-      # Azure Login using OIDC
       - name: Azure Login via OIDC
         uses: azure/login@v2
         with:
@@ -130,11 +103,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Terraform Init
       - name: Terraform Init
         run: terraform init
         env:
@@ -143,7 +114,6 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
-      # Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         env:
@@ -151,4 +121,3 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
-```

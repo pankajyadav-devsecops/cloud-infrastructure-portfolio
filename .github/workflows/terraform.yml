@@ -66,7 +66,6 @@ jobs:
           ARM_USE_OIDC: true
 
       - name: Save Terraform Plan Artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan

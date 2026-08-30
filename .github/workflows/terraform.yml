@@ -20,6 +20,10 @@ permissions:
 
 jobs:
 
+  # ============================================================
+  # TERRAFORM PLAN
+  # ============================================================
+
   terraform-plan:
     name: 'Terraform Init, Validate & Plan'
     runs-on: self-hosted
@@ -31,8 +35,17 @@ jobs:
 
     steps:
 
+      # ----------------------------------------------------------
+      # Checkout
+      # ----------------------------------------------------------
+
       - name: Checkout Code
         uses: actions/checkout@v4
+
+
+      # ----------------------------------------------------------
+      # Azure Login using OIDC
+      # ----------------------------------------------------------
 
       - name: Azure Login via OIDC
         uses: azure/login@v2
@@ -41,8 +54,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+
+      # ----------------------------------------------------------
+      # Setup Terraform
+      # ----------------------------------------------------------
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+
+      # ----------------------------------------------------------
+      # Terraform Init
+      # ----------------------------------------------------------
 
       - name: Terraform Init
         run: terraform init
@@ -52,10 +75,20 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
+
+      # ----------------------------------------------------------
+      # Terraform Format & Validate
+      # ----------------------------------------------------------
+
       - name: Terraform Format & Validate
         run: |
           terraform fmt -check
           terraform validate
+
+
+      # ----------------------------------------------------------
+      # Terraform Plan
+      # ----------------------------------------------------------
 
       - name: Terraform Plan
         run: terraform plan -no-color -out=tfplan
@@ -65,20 +98,46 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
 
+
+      # ----------------------------------------------------------
+      # Verify Terraform Plan File
+      # ----------------------------------------------------------
+
+      - name: Verify Terraform Plan File
+        run: |
+          Get-ChildItem tfplan
+          Test-Path tfplan
+
+
+      # ----------------------------------------------------------
+      # Upload Terraform Plan Artifact
+      # Only on main branch push
+      # ----------------------------------------------------------
+
       - name: Save Terraform Plan Artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: environment/dev/tfplan
+          if-no-files-found: error
+
+
+  # ============================================================
+  # TERRAFORM APPLY
+  # ============================================================
 
   terraform-apply:
     name: 'Terraform Approval & Apply'
+
     needs: terraform-plan
 
+    # Apply ONLY after push to main
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     runs-on: self-hosted
+
+    # GitHub Environment approval
     environment: dev-approval
 
     defaults:
@@ -87,14 +146,38 @@ jobs:
 
     steps:
 
+      # ----------------------------------------------------------
+      # Checkout
+      # ----------------------------------------------------------
+
       - name: Checkout Code
         uses: actions/checkout@v4
+
+
+      # ----------------------------------------------------------
+      # Download Terraform Plan Artifact
+      # ----------------------------------------------------------
 
       - name: Download Terraform Plan Artifact
         uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: environment/dev
+
+
+      # ----------------------------------------------------------
+      # Verify Downloaded Plan
+      # ----------------------------------------------------------
+
+      - name: Verify Downloaded Terraform Plan
+        run: |
+          Get-ChildItem tfplan
+          Test-Path tfplan
+
+
+      # ----------------------------------------------------------
+      # Azure Login using OIDC
+      # ----------------------------------------------------------
 
       - name: Azure Login via OIDC
         uses: azure/login@v2
@@ -103,8 +186,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+
+      # ----------------------------------------------------------
+      # Setup Terraform
+      # ----------------------------------------------------------
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+
+      # ----------------------------------------------------------
+      # Terraform Init
+      # ----------------------------------------------------------
 
       - name: Terraform Init
         run: terraform init
@@ -113,6 +206,11 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
+
+
+      # ----------------------------------------------------------
+      # Terraform Apply
+      # ----------------------------------------------------------
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
